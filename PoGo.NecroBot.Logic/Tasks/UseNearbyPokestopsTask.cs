@@ -18,6 +18,7 @@ using POGOProtos.Networking.Responses;
 using PoGo.NecroBot.Logic.Event.Gym;
 using PoGo.NecroBot.Logic.Model;
 using PoGo.NecroBot.Logic.Exceptions;
+using PoGo.NecroBot.Logic.Model.Settings;
 
 #endregion
 
@@ -408,16 +409,21 @@ namespace PoGo.NecroBot.Logic.Tasks
             } while (fortTry < retryNumber - zeroCheck);
             //Stop trying if softban is cleaned earlier or if 40 times fort looting failed.
 
-            if(fortTry >= retryNumber - zeroCheck)
+            if (MultipleBotConfig.IsMultiBotActive(session.LogicSettings))
             {
-                session.CancellationTokenSource.Cancel();
-                //Activate switcher by pokestop
-                throw new ActiveSwitchByRuleException()
+                if (fortTry >= retryNumber - zeroCheck)
                 {
-                    MatchedRule = SwitchRules.PokestopSoftban,
-                    ReachedValue = 1
-                };
+                    session.CancellationTokenSource.Cancel();
+                    
+                    //Activate switcher by pokestop
+                    throw new ActiveSwitchByRuleException()
+                    {
+                        MatchedRule = SwitchRules.PokestopSoftban,
+                        ReachedValue = 1
+                    };
+                }
             }
+
             if (session.LogicSettings.RandomlyPauseAtStops && !doNotRetry)
             {
                 if (++_randomStop >= _randomNumber)

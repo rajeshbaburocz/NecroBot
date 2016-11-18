@@ -412,27 +412,33 @@ namespace PoGo.NecroBot.Logic.Tasks
                 } while (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchMissed ||
                          caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchEscape);
 
-                if(caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchFlee)
+                if (MultipleBotConfig.IsMultiBotActive(session.LogicSettings))
                 {
-                    CatchFleeContinuouslyCount++;
-                    if(CatchFleeContinuouslyCount > 10)
+                    if (caughtPokemonResponse.Status == CatchPokemonResponse.Types.CatchStatus.CatchFlee)
                     {
-                        CatchFleeContinuouslyCount = 0;
-                        throw new ActiveSwitchByRuleException()
+                        CatchFleeContinuouslyCount++;
+                        if (CatchFleeContinuouslyCount > 10)
                         {
-                            MatchedRule = SwitchRules.CatchFlee,
-                            ReachedValue = 10
-                        };
+                            CatchFleeContinuouslyCount = 0;
+
+                            throw new ActiveSwitchByRuleException()
+                            {
+                                MatchedRule = SwitchRules.CatchFlee,
+                                ReachedValue = 10
+                            };
+                        }
+                    }
+                    else
+                    {
+                        //reset if not catch flee.
+                        CatchFleeContinuouslyCount = 0;
                     }
                 }
-                else
-                {
-                    //reset if not catch flee.
-                    CatchFleeContinuouslyCount = 0;
-                }
+
                 session.Actions.RemoveAll(x => x == Model.BotActions.Catch);
 
-                ExecuteSwitcher(session, encounterEV);
+                if (MultipleBotConfig.IsMultiBotActive(session.LogicSettings))
+                    ExecuteSwitcher(session, encounterEV);
 
                 if (session.LogicSettings.TransferDuplicatePokemonOnCapture &&
                     session.LogicSettings.TransferDuplicatePokemon &&
@@ -455,20 +461,18 @@ namespace PoGo.NecroBot.Logic.Tasks
             if (LocationUtils.CalculateDistanceInMeters(encounterEV.Latitude, encounterEV.Longitude, session.Client.CurrentLatitude, session.Client.CurrentLongitude) > 2000)
                 return;
 
-            if (session.LogicSettings.AllowMultipleBot &&
-                                session.LogicSettings.Bots != null &&
-                                session.LogicSettings.Bots.Count > 0 &&
-                                session.LogicSettings.MultipleBotConfig.OnRarePokemon &&
-                                (
-                                    session.LogicSettings.MultipleBotConfig.MinIVToSwitch < encounterEV.IV ||
-                                    (
-                                        session.LogicSettings.BotSwitchPokemonFilters.ContainsKey(encounterEV.PokemonId) &&
-                                        (
-                                            session.LogicSettings.BotSwitchPokemonFilters[encounterEV.PokemonId].IV < encounterEV.IV ||
-                                            (session.LogicSettings.BotSwitchPokemonFilters[encounterEV.PokemonId].LV > 0 && session.LogicSettings.BotSwitchPokemonFilters[encounterEV.PokemonId].LV < encounterEV.Level)
-                                        )
-                                     )
-                                ))
+            if (MultipleBotConfig.IsMultiBotActive(session.LogicSettings) &&
+                session.LogicSettings.MultipleBotConfig.OnRarePokemon &&
+                (
+                    session.LogicSettings.MultipleBotConfig.MinIVToSwitch < encounterEV.IV ||
+                    (
+                        session.LogicSettings.BotSwitchPokemonFilters.ContainsKey(encounterEV.PokemonId) &&
+                        (
+                            session.LogicSettings.BotSwitchPokemonFilters[encounterEV.PokemonId].IV < encounterEV.IV ||
+                            (session.LogicSettings.BotSwitchPokemonFilters[encounterEV.PokemonId].LV > 0 && session.LogicSettings.BotSwitchPokemonFilters[encounterEV.PokemonId].LV < encounterEV.Level)
+                        )
+                        )
+                ))
             {
                 var curentkey = session.Settings.AuthType == PokemonGo.RocketAPI.Enums.AuthType.Google ? session.Settings.GoogleUsername : session.Settings.PtcUsername;
                 curentkey += encounterEV.EncounterId;
