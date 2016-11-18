@@ -36,6 +36,12 @@ namespace PoGo.NecroBot.Logic.Model.Settings
         [JsonProperty(Required = Required.DisallowNull, DefaultValueHandling = DefaultValueHandling.Ignore, Order = 3)]
         public DeviceConfig DeviceConfig = new DeviceConfig();
 
+        [JsonProperty(Required = Required.DisallowNull, DefaultValueHandling = DefaultValueHandling.Ignore, Order = 4)]
+        public bool AllowMultipleBot = false;
+
+        [JsonProperty(Required = Required.Default, DefaultValueHandling = DefaultValueHandling.Ignore, Order = 5)]
+        public List<AuthConfig> Bots= new List<AuthConfig>();
+
         private JSchema _schema;
 
         private JSchema JsonSchema
@@ -123,7 +129,7 @@ namespace PoGo.NecroBot.Logic.Model.Settings
         //    }
         //}
 
-        public void Load(string path, bool boolSkipSave = false, bool validate = false)
+        public void Load(string path, bool validate = false)
         {
             try
             {
@@ -237,8 +243,7 @@ namespace PoGo.NecroBot.Logic.Model.Settings
                     DeviceConfig.DeviceId = RandomString(32, "0123456789abcdef");
                 }
 
-                if (!boolSkipSave)
-                    Save(_filePath);
+                Save(_filePath);
             }
             catch (JsonReaderException exception)
             {
