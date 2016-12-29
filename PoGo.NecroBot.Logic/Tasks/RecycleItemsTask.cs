@@ -23,7 +23,7 @@ namespace PoGo.NecroBot.Logic.Tasks
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            await session.Inventory.RefreshCachedInventory();
+            //await session.Inventory.RefreshCachedInventory();
 
             var currentTotalItems = await session.Inventory.GetTotalItemCount();
             if ((session.Profile.PlayerData.MaxItemStorage * session.LogicSettings.RecycleInventoryAtUsagePercentage / 100.0f) > currentTotalItems)
@@ -90,7 +90,7 @@ namespace PoGo.NecroBot.Logic.Tasks
             if (session.LogicSettings.TotalAmountOfBerriesToKeep >= 0)
                 await OptimizedRecycleBerries(session, cancellationToken);
 
-            await session.Inventory.RefreshCachedInventory();
+            //await session.Inventory.RefreshCachedInventory();
             currentTotalItems = await session.Inventory.GetTotalItemCount();
             if ((session.Profile.PlayerData.MaxItemStorage * session.LogicSettings.RecycleInventoryAtUsagePercentage / 100.0f) > currentTotalItems)
                 return;
@@ -99,16 +99,19 @@ namespace PoGo.NecroBot.Logic.Tasks
 
             foreach (var item in items)
             {
+                if (item.Count <= 0) continue;
+
                 cancellationToken.ThrowIfCancellationRequested();
 
                 await session.Client.Inventory.RecycleItem(item.ItemId, item.Count);
+                await session.Inventory.UpdateInventoryItem(item.ItemId, -item.Count);
 
                 if (session.LogicSettings.VerboseRecycling)
                     session.EventDispatcher.Send(new ItemRecycledEvent { Id = item.ItemId, Count = item.Count });
 
                 DelayingUtils.Delay(session.LogicSettings.RecycleActionDelay, 500);
             }
-            await session.Inventory.RefreshCachedInventory();
+            //await session.Inventory.RefreshCachedInventory();
         }
 
         private static async Task RecycleItems(ISession session, CancellationToken cancellationToken, int itemCount, ItemId item, int maxItemToKeep = 1000)
@@ -123,7 +126,7 @@ namespace PoGo.NecroBot.Logic.Tasks
                 itemsToKeep = Math.Min(itemsToKeep, maxItemToKeep);
             }
             itemsToRecycle = itemCount - itemsToKeep;
-            if (itemsToRecycle != 0)
+            if (itemsToRecycle > 0)
             {
                 _diff -= itemsToRecycle;
                 cancellationToken.ThrowIfCancellationRequested();

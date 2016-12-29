@@ -69,7 +69,7 @@ namespace PoGo.NecroBot.Logic.Tasks
             // Exit if user defined max limits reached
             if (session.Stats.CatchThresholdExceeds(session))
             {
-                if(session.LogicSettings.MultipleBotConfig.SwitchOnCatchLimit)
+                if(session.LogicSettings.AllowMultipleBot && session.LogicSettings.MultipleBotConfig.SwitchOnCatchLimit)
                 {
                     throw new Exceptions.ActiveSwitchByRuleException() { MatchedRule = SwitchRules.CatchLimitReached, ReachedValue = session.LogicSettings.CatchPokemonLimit };
                 }
@@ -312,6 +312,9 @@ namespace PoGo.NecroBot.Logic.Tasks
                                      ? pokemon.SpawnPointId
                                      : currentFortData.Id, pokeball, normalizedRecticleSize, spinModifier, hitPokemon);
 
+                   
+                   await session.Inventory.UpdateInventoryItem(pokeball, -1);
+
                     var evt = new PokemonCaptureEvent()
                     {
                         Status = caughtPokemonResponse.Status,
@@ -326,7 +329,13 @@ namespace PoGo.NecroBot.Logic.Tasks
                     {
                         var totalExp = 0;
 
-                        foreach (var xp in caughtPokemonResponse.CaptureAward.Xp)
+                        if (encounteredPokemon != null)
+                        {
+                            encounteredPokemon.Id = caughtPokemonResponse.CapturedPokemonId;
+                            await session.Inventory.AddPokemonToCache(encounteredPokemon);
+                            
+                        }
+                            foreach (var xp in caughtPokemonResponse.CaptureAward.Xp)
                         {
                             totalExp += xp;
                         }
@@ -345,6 +354,7 @@ namespace PoGo.NecroBot.Logic.Tasks
 
                         if (family != null)
                         {
+                            await session.Inventory.UpdateCandy(family, caughtPokemonResponse.CaptureAward.Candy.Sum());
                             family.Candy_ += caughtPokemonResponse.CaptureAward.Candy.Sum();
                             evt.FamilyCandies = family.Candy_;
                         }
@@ -387,7 +397,7 @@ namespace PoGo.NecroBot.Logic.Tasks
                     evt.Pokeball = pokeball;
                     evt.Attempt = attemptCounter;
 
-                    await session.Inventory.RefreshCachedInventory();
+                    //await session.Inventory.RefreshCachedInventory();
 
                     evt.BallAmount = await session.Inventory.GetItemAmountByType(pokeball);
                     evt.Rarity = PokemonGradeHelper.GetPokemonGrade(evt.Id).ToString();
@@ -596,6 +606,8 @@ namespace PoGo.NecroBot.Logic.Tasks
 
             var useCaptureItem = await session.Client.Encounter.UseCaptureItem(encounterId, ItemId.ItemRazzBerry, spawnPointId);
             berry.Count -= 1;
+            await session.Inventory.UpdateInventoryItem(berry.ItemId, -1);
+
             session.EventDispatcher.Send(new UseBerryEvent { BerryType = ItemId.ItemRazzBerry, Count = berry.Count });
         }
     }
