@@ -13,9 +13,9 @@ namespace PoGo.NecroBot.CLI.WebSocketHandler.GetCommands.Helpers
 {
     public class PokemonListWeb
     {
-        public PokemonData Base;
         private readonly List<Candy> _families;
-        private readonly IEnumerable<PokemonSettings> _settings; 
+        private readonly IEnumerable<PokemonSettings> _settings;
+        public PokemonData Base;
 
         public PokemonListWeb(PokemonData data, List<Candy> family, IEnumerable<PokemonSettings> settings)
         {
